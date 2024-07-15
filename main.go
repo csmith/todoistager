@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -17,11 +18,25 @@ import (
 
 var (
 	apiToken = flag.String("api-token", "", "Personal API token for Todoist")
+	period   = flag.Duration("period", 0, "Length of time between each update. If zero, will update once and exit.")
 )
 
 func main() {
 	envflag.Parse()
 
+	if period.Minutes() < 1 {
+		log.Printf("Period is not set: performing one-shot run")
+		run()
+	} else {
+		for {
+			run()
+			log.Printf("Run complete. Sleeping for %v", period)
+			time.Sleep(*period)
+		}
+	}
+}
+
+func run() {
 	tasks := getTasks()
 
 	for i := range tasks {
@@ -48,6 +63,7 @@ func main() {
 					newLabels = append(newLabels, l)
 				}
 			}
+			log.Printf("Added '%s' label to task '%s'", label, tasks[i].Content)
 			updateTask(tasks[i].ID, newLabels)
 		}
 	}
@@ -58,6 +74,7 @@ type Task struct {
 	Labels    []string  `json:"labels"`
 	Created   time.Time `json:"created_at"`
 	Completed bool      `json:"is_completed"`
+	Content   string    `json:"content"`
 	Due       struct {
 		Recurring bool `json:"is_recurring"`
 	} `json:"due"`
