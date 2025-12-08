@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,11 @@ var (
 
 func main() {
 	envflag.Parse()
+
+	if *apiToken == "" {
+		log.Printf("No API token provided.")
+		os.Exit(2)
+	}
 
 	if period.Minutes() < 1 {
 		log.Printf("Period is not set: performing one-shot run")
