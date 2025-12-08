@@ -1,10 +1,14 @@
-FROM reg.c5h.io/golang as builder
+FROM golang:1.25.5 AS build
+WORKDIR /go/src/app
+COPY . .
 
-WORKDIR /app
-COPY . /app
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -trimpath -ldflags=-buildid= -o main ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    set -eux; \
+    CGO_ENABLED=0 GO111MODULE=on go install ./; \
+    go run github.com/google/go-licenses@latest save ./... --save_path=/notices;
 
-FROM reg.c5h.io/base
 
-COPY --from=builder /app/main /todoistager
-CMD ["/todoistager"]
+FROM ghcr.io/greboid/dockerbase/nonroot:1.20250803.0
+COPY --from=build /go/bin/todoistager /todoistager
+COPY --from=build /notices /notices
+ENTRYPOINT ["/todoistager"]
